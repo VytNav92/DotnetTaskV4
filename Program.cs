@@ -19,14 +19,57 @@ namespace DotnetTaskV4
             {
                 Console.WriteLine($"Cannot proceed. {validationMessage}");
             }
+            else
+            {
 
-            var csvFiles = Directory.GetFiles(settings.DataRootDirectory, $"*{CsvFileExtension}", SearchOption.AllDirectories);
+                Console.WriteLine("Checking csv files...");
+                var csvFiles = Directory.GetFiles(settings.DataRootDirectory, $"*{CsvFileExtension}", SearchOption.AllDirectories);
+                Console.WriteLine($"Found {csvFiles.Length} csv files");
 
-            var dataProcessor = new DataProcessor();
-            var dataProcessorTask = dataProcessor.ProcessAsync(csvFiles, Environment.ProcessorCount * 2, CancellationToken.None);
-            await dataProcessorTask;
+                Console.WriteLine($"Processing csv files...");
+                using var cancellationTokenSource = new CancellationTokenSource();
+                Console.CancelKeyPress += delegate (object sender, ConsoleCancelEventArgs e)
+                {
+                    if (!cancellationTokenSource.IsCancellationRequested)
+                    {
+                        e.Cancel = true;
+                        cancellationTokenSource.Cancel();
+                    }
+                };
+
+                var dataProcessor = new DataProcessor();
+                var dataProcessorTask = dataProcessor.ProcessAsync(csvFiles, Environment.ProcessorCount * 2, cancellationTokenSource.Token);
+                await TrackProgress(dataProcessorTask, dataProcessor);
+
+                await dataProcessorTask;
+                Console.WriteLine($"Total files count: {dataProcessor.ProcessedFilesCount}");
+                Console.WriteLine($"Execution time: {dataProcessor.ElapsedTime}");
+            }
             Console.WriteLine("Press any key to exit.");
             Console.ReadLine();
+        }
+
+        private static async Task TrackProgress(Task dataProcessorTask, DataProcessor dataProcessor)
+        {
+            var cursorLeftPosition = Console.CursorLeft;
+            var cursorTopPosition = Console.CursorTop;
+            var consoleCleaner = new string(' ', Console.WindowWidth);
+
+            do
+            {
+                await Task.Delay(1000);
+                Console.SetCursorPosition(cursorLeftPosition, cursorTopPosition);
+                Console.Write(consoleCleaner);
+                if (dataProcessor.ElapsedTime.TotalMilliseconds > 0)
+                {
+                    var averageSpeed = 1000 * dataProcessor.ProcessedFilesCount / dataProcessor.ElapsedTime.TotalMilliseconds;
+                    Console.SetCursorPosition(cursorLeftPosition, cursorTopPosition);
+                    Console.Write($"Average speed: {averageSpeed:0.#} files per second");
+                }
+            }
+            while (!dataProcessorTask.IsCompleted);
+
+            Console.WriteLine();
         }
 
         private static IConfigurationRoot GetConfiguration()

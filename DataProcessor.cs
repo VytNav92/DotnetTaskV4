@@ -1,5 +1,7 @@
 ﻿using DotnetTaskV4.Models;
+using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using System.Threading.Channels;
@@ -10,6 +12,12 @@ namespace DotnetTaskV4
     public class DataProcessor
     {
         private readonly Channel<DeviceData> _channel;
+        private readonly Stopwatch _stopwatch = new Stopwatch();
+
+        private int _processedFilesCount;
+
+        public int ProcessedFilesCount { get { return _processedFilesCount; } }
+        public TimeSpan ElapsedTime { get { return _stopwatch.Elapsed; } }
 
         public DataProcessor()
         {
@@ -25,10 +33,13 @@ namespace DotnetTaskV4
             await Task.Yield();
             var consumeTask = ConsumeAsync();
 
+            _stopwatch.Start();
             await csvFiles.RunParallelAsync(async csvFilePath =>
             {
                 await ProduceAsync(csvFilePath, cancellationToken);
+                Interlocked.Increment(ref _processedFilesCount);
             }, maxDegreeOfParallelism, cancellationToken);
+            _stopwatch.Stop();
 
             _channel.Writer.Complete();
         }
