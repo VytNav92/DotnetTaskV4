@@ -2,12 +2,15 @@
 using Microsoft.Extensions.Configuration;
 using System;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace DotnetTaskV4
 {
     class Program
     {
+        private const string CsvFileExtension = ".csv";
+
         static async Task Main()
         {
             var configuration = GetConfiguration();
@@ -17,6 +20,11 @@ namespace DotnetTaskV4
                 Console.WriteLine($"Cannot proceed. {validationMessage}");
             }
 
+            var csvFiles = Directory.GetFiles(settings.DataRootDirectory, $"*{CsvFileExtension}", SearchOption.AllDirectories);
+
+            var dataProcessor = new DataProcessor();
+            var dataProcessorTask = dataProcessor.ProcessAsync(csvFiles, Environment.ProcessorCount * 2, CancellationToken.None);
+            await dataProcessorTask;
             Console.WriteLine("Press any key to exit.");
             Console.ReadLine();
         }
