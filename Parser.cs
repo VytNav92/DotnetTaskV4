@@ -25,7 +25,7 @@ namespace DotnetTaskV4
 
             var delimiterEndPositions = new int[DelimitersCount];
             int bufferLastIndex, delimitersCount = 0, lineStartIndex, remainderSize = 0;
-            bool canBeDelimiter = false, canBeEndLine = false;
+            bool canBeDelimiter = false, windowsLineEnding = false;
             char[] currentBuffer, preparedBufferWithRemainder = ArrayPool<char>.Shared.Rent(MinimumRentLength);
 
             while (!reader.EndOfStream)
@@ -70,25 +70,23 @@ namespace DotnetTaskV4
 
                     if (currentBuffer[i] == '\r')
                     {
-                        canBeEndLine = true;
+                        windowsLineEnding = true;
                         continue;
                     }
 
-                    if (canBeEndLine)
+                    if (currentBuffer[i] == '\n')
                     {
-                        canBeEndLine = false;
-                        if (currentBuffer[i] == '\n')
-                        {
-                            if (delimitersCount == DelimitersCount && IsDataRowEnd(currentBuffer[i - 2]))
-                                yield return ParseData(currentBuffer, lineStartIndex, i - 2, delimiterEndPositions);
+                        var lineEndingSize = windowsLineEnding ? 2 : 1;
+                        windowsLineEnding = false;
 
-                            lineStartIndex = i + 1;
-                            delimitersCount = 0;
-                            continue;
-                        }
+                        if (delimitersCount == DelimitersCount && IsDataRowEnd(currentBuffer[i - lineEndingSize]))
+                            yield return ParseData(currentBuffer, lineStartIndex, i - lineEndingSize, delimiterEndPositions);
+
+                        lineStartIndex = i + 1;
+                        delimitersCount = 0;
+                        continue;
                     }
                 }
-
 
                 remainderSize = bufferLastIndex - lineStartIndex;
 
