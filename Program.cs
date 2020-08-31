@@ -1,7 +1,10 @@
 ﻿using DotnetTaskV4.Models;
+using DotnetTaskV4.ReportGenerator;
 using Microsoft.Extensions.Configuration;
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -10,6 +13,7 @@ namespace DotnetTaskV4
     class Program
     {
         private const string CsvFileExtension = ".csv";
+        private const string ReportCsvDelimiter = ";";
 
         static async Task Main()
         {
@@ -41,9 +45,13 @@ namespace DotnetTaskV4
                 var dataProcessorTask = dataProcessor.ProcessAsync(csvFiles, Environment.ProcessorCount * 2, cancellationTokenSource.Token);
                 await TrackProgress(dataProcessorTask, dataProcessor);
 
-                var reportData = await dataProcessorTask;
                 Console.WriteLine($"Total files count: {dataProcessor.ProcessedFilesCount}");
                 Console.WriteLine($"Execution time: {dataProcessor.ElapsedTime}");
+                var reportData = await dataProcessorTask;
+
+                Console.WriteLine("Creating report...");
+                await GenerateReportAsync(settings.ReportDirectory, reportData);
+                Console.WriteLine("Report created successfully");
             }
             Console.WriteLine("Press any key to exit.");
             Console.ReadLine();
@@ -70,6 +78,15 @@ namespace DotnetTaskV4
             while (!dataProcessorTask.IsCompleted);
 
             Console.WriteLine();
+        }
+        private static async Task GenerateReportAsync(string directoryPath, Dictionary<string, ReportData> reportData)
+        {
+            var reportGenerator = new ReportGenerator<ReportData>(ReportCsvDelimiter, ReportGeneratorRules.HeaderColumnNames, ReportGeneratorRules.DataRowGenerationRules);
+            var orderedReportData = reportData.Values.OrderBy(x => x.Band).ThenBy(x => x.Plc);
+
+            var reportFileName = $"report-{DateTime.Now:yyyy-MM-dd_hhmmss}{CsvFileExtension}";
+            var reportPath = Path.Combine(directoryPath, reportFileName);
+            await reportGenerator.GenerateAsync(reportPath, orderedReportData);
         }
 
         private static IConfigurationRoot GetConfiguration()
