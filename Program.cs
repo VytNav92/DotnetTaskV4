@@ -25,7 +25,6 @@ namespace DotnetTaskV4
             }
             else
             {
-
                 Console.WriteLine("Checking csv files...");
                 var csvFiles = Directory.GetFiles(settings.DataRootDirectory, $"*{CsvFileExtension}", SearchOption.AllDirectories);
                 Console.WriteLine($"Found {csvFiles.Length} csv files");
@@ -53,6 +52,7 @@ namespace DotnetTaskV4
                 await GenerateReportAsync(settings.ReportDirectory, reportData);
                 Console.WriteLine("Report created successfully");
             }
+
             Console.WriteLine("Press any key to exit.");
             Console.ReadLine();
         }
