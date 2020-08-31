@@ -10,7 +10,6 @@ namespace DotnetTaskV4
     public static class Parser
     {
         private const int BytesToSkip = 4200;
-        private const string DataDelimiter = ", ";
         private const int DelimitersCount = 6;
         private const int MinimumRentLength = 64;
 
@@ -110,12 +109,12 @@ namespace DotnetTaskV4
 
         private static bool IsDelimiterBeginning(char character)
         {
-            return character == DataDelimiter[0];
+            return character == DeviceData.DataDelimiter[0];
         }
 
         private static bool IsDelimiterEnd(char character)
         {
-            return character == DataDelimiter[1];
+            return character == DeviceData.DataDelimiter[1];
         }
 
         private static bool IsDataRowEnd(char character)
@@ -147,7 +146,7 @@ namespace DotnetTaskV4
 
         private static Span<char> GetSpan(char[] buffer, int previousDelimiterPosition, int nextDelimiterPosition)
         {
-            return buffer.AsSpan(previousDelimiterPosition + 1, nextDelimiterPosition - previousDelimiterPosition - DataDelimiter.Length);
+            return buffer.AsSpan(previousDelimiterPosition + 1, nextDelimiterPosition - previousDelimiterPosition - DeviceData.DataDelimiter.Length);
         }
     }
 }

@@ -41,7 +41,7 @@ namespace DotnetTaskV4
                 var dataProcessorTask = dataProcessor.ProcessAsync(csvFiles, Environment.ProcessorCount * 2, cancellationTokenSource.Token);
                 await TrackProgress(dataProcessorTask, dataProcessor);
 
-                await dataProcessorTask;
+                var reportData = await dataProcessorTask;
                 Console.WriteLine($"Total files count: {dataProcessor.ProcessedFilesCount}");
                 Console.WriteLine($"Execution time: {dataProcessor.ElapsedTime}");
             }

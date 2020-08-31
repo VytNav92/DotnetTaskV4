@@ -28,7 +28,7 @@ namespace DotnetTaskV4
             });
         }
 
-        public async Task ProcessAsync(IReadOnlyCollection<string> csvFiles, int maxDegreeOfParallelism, CancellationToken cancellationToken)
+        public async Task<Dictionary<string, ReportData>> ProcessAsync(IReadOnlyCollection<string> csvFiles, int maxDegreeOfParallelism, CancellationToken cancellationToken)
         {
             await Task.Yield();
             var consumeTask = ConsumeAsync();
@@ -42,14 +42,48 @@ namespace DotnetTaskV4
             _stopwatch.Stop();
 
             _channel.Writer.Complete();
+            return await consumeTask;
         }
 
-        private async Task ConsumeAsync()
+        private async Task<Dictionary<string, ReportData>> ConsumeAsync()
         {
+            var report = new Dictionary<string, ReportData>();
+
             while (await _channel.Reader.WaitToReadAsync())
             {
                 var data = await _channel.Reader.ReadAsync();
+
+                var key = $"{data.Band}{DeviceData.DataDelimiter}{data.Plc}";
+
+                if (!report.TryGetValue(key, out ReportData reportData))
+                {
+                    reportData = new ReportData
+                    {
+                        Band = data.Band,
+                        Plc = data.Plc
+                    };
+
+                    report[key] = reportData;
+                }
+
+                if (data.TxPower < data.MinPower)
+                    reportData.LowTxPowerSum += data.TxPower;
+                else
+                {
+                    if (data.TxPower >= data.MinPower && data.TxPower <= data.MaxPower)
+                        reportData.InRangeTxPowerSum += data.TxPower;
+
+                    if (data.TxPower >= data.MaxPower)
+                        reportData.HighTxPowerSum += data.TxPower;
+                }
+
+                if (data.CheckResult)
+                    reportData.PassCount++;
+                else
+                    reportData.FailCount++;
             }
+
+            return report;
         }
 
         private async Task ProduceAsync(string csvFilePath, CancellationToken cancellationToken)

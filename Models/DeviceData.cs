@@ -4,6 +4,7 @@
     {
         public const string CheckResultFail = "FAIL";
         public const string CheckResultPass = "PASS";
+        public const string DataDelimiter = ", ";
 
         public string Band { get; set; }
         public int Plc { get; set; }
